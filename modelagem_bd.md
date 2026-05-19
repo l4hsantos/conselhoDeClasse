@@ -1,0 +1,119 @@
+CREATE DATABASE sistema_escolar;
+USE sistema_escolar;
+
+-- TABELA DE USUÁRIO --
+CREATE TABLE usuario (
+idUsuario INT AUTO_INCREMENT PRIMARY KEY,
+nome VARCHAR(100) NOT NULL,
+email VARCHAR(100) NOT NULL UNIQUE,
+senha VARCHAR(100) NOT NULL,
+perfil ENUM('professor', 'coordenador', 'diretor') NOT NULL
+);
+
+-- TABELA PROFESSOR --
+CREATE TABLE professor (
+idUsuario INT PRIMARY KEY,
+FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
+);
+
+-- TABELA COORDENADOR --
+CREATE TABLE coordenador (
+idUsuario INT PRIMARY KEY,
+FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
+);
+
+-- TABELA DIRETOR --
+CREATE TABLE diretor (
+idUsuario INT PRIMARY KEY,
+FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
+);
+
+-- TABELA TURMA --
+CREATE TABLE turma (
+idTurma INT AUTO_INCREMENT PRIMARY KEY,
+nome VARCHAR(50) NOT NULL,
+ano INT NOT NULL
+);
+
+-- TABELA ALUNO --
+CREATE TABLE aluno (
+matricula INT AUTO_INCREMENT PRIMARY KEY,
+nome VARCHAR(100) NOT NULL,
+dataNascimento DATE NOT NULL,
+media DECIMAL(5,2),
+frequencia DECIMAL(5,2),
+situacao VARCHAR(50),
+idTurma INT,
+FOREIGN KEY (idTurma) REFERENCES turma(idTurma)
+);
+
+-- TABELA DISCIPLINA --
+CREATE TABLE disciplina (
+idDisciplina INT AUTO_INCREMENT PRIMARY KEY,
+nome VARCHAR(100) NOT NULL,
+cargaHoraria INT NOT NULL,
+idProfessor INT,
+FOREIGN KEY (idProfessor) REFERENCES professor(idUsuario)
+);
+
+-- TABELA NOTA --
+CREATE TABLE nota (
+idNota INT AUTO_INCREMENT PRIMARY KEY,
+valor DECIMAL(5,2) NOT NULL,
+unidade VARCHAR(20),
+dataRegistro DATE NOT NULL,
+matricula INT,
+idDisciplina INT,
+FOREIGN KEY (matricula) REFERENCES aluno(matricula),
+FOREIGN KEY (idDisciplina) REFERENCES disciplina(idDisciplina)
+);
+
+-- TABELA FALTA --
+CREATE TABLE falta (
+idFalta INT AUTO_INCREMENT PRIMARY KEY,
+quantidade INT NOT NULL,
+dataRegistro DATE NOT NULL,
+matricula INT,
+FOREIGN KEY (matricula) REFERENCES aluno(matricula)
+);
+
+-- TABELA OBSERVACAO --
+CREATE TABLE observacao (
+idObservacao INT AUTO_INCREMENT PRIMARY KEY,
+descricao TEXT NOT NULL,
+data DATE NOT NULL,
+matricula INT,
+FOREIGN KEY (matricula) REFERENCES aluno(matricula)
+);
+
+-- TABELA ANEXO --
+CREATE TABLE anexo (
+idAnexo INT AUTO_INCREMENT PRIMARY KEY,
+nomeArquivo VARCHAR(100) NOT NULL,
+tipoArquivo VARCHAR(50),
+dataUpload DATE NOT NULL,
+matricula INT,
+FOREIGN KEY (matricula) REFERENCES aluno(matricula)
+);
+
+-- TABELA CONSELHO --
+CREATE TABLE conselho_classe (
+idConselho INT AUTO_INCREMENT PRIMARY KEY,
+data DATE NOT NULL,
+observacoes TEXT,
+idTurma INT,
+matricula INT,
+FOREIGN KEY (idTurma) REFERENCES turma(idTurma),
+FOREIGN KEY (matricula) REFERENCES aluno(matricula)
+);
+
+-- TABELA LOG --
+CREATE TABLE log_alteracao (
+idLog INT AUTO_INCREMENT PRIMARY KEY,
+data DATE NOT NULL,
+hora TIME NOT NULL,
+acao VARCHAR(100) NOT NULL,
+tabelaAfetada VARCHAR(100) NOT NULL,
+idUsuario INT,
+FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
+);
