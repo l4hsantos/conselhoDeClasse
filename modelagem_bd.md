@@ -100,25 +100,16 @@ CREATE TABLE falta (
     REFERENCES disciplina(idDisciplina)
 );
 
-
--- TABELA OBSERVACAO --
-
+-- TABELA OBSERVAÇÃO -- 
 CREATE TABLE observacao (
     idObservacao INT AUTO_INCREMENT PRIMARY KEY,
     descricao TEXT NOT NULL,
     data DATE NOT NULL,
-    matricula INT,
-    FOREIGN KEY (matricula)
-    REFERENCES aluno(matricula)
-);
-
-
--- TABELA ANEXO --
-CREATE TABLE anexo (
-    idAnexo INT AUTO_INCREMENT PRIMARY KEY,
-    nomeArquivo VARCHAR(100) NOT NULL,
+    
+-- atributos do anexo --
+    nomeArquivo VARCHAR(100),
     tipoArquivo VARCHAR(50),
-    dataUpload DATE NOT NULL,
+    dataUpload DATE,
     matricula INT,
     FOREIGN KEY (matricula)
     REFERENCES aluno(matricula)
@@ -143,7 +134,6 @@ CREATE TABLE log_alteracao (
     hora TIME NOT NULL,
     acao VARCHAR(100) NOT NULL,
     idUsuario INT,
-
     FOREIGN KEY (idUsuario)
-        REFERENCES usuario(idUsuario)
+    REFERENCES usuario(idUsuario)
 );
