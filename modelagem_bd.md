@@ -1,3 +1,6 @@
+# Sistema Escolar
+
+```sql
 CREATE DATABASE sistema_escolar;
 USE sistema_escolar;
 
@@ -137,3 +140,4 @@ CREATE TABLE log_alteracao (
     FOREIGN KEY (idUsuario)
     REFERENCES usuario(idUsuario)
 );
+```
