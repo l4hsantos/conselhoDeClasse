@@ -1,21 +1,17 @@
-// ================= IMPORTAÇÕES =================
 const express = require('express');
 const cors = require('cors');
 
 const app = express();
 
-// ================= CONFIG =================
 app.use(cors());
 app.use(express.json());
 
 const PORT = 3000;
 
-// ================= ROTA INICIAL =================
 app.get('/', (req, res) => {
   res.send('API do sistema escolar funcionando 🚀');
 });
 
-// ================= BANCO TEMPORÁRIO =================
 let professores = [];
 
 let alunos = [
@@ -35,7 +31,6 @@ let alunos = [
   },
 ];
 
-// ================= LOGIN =================
 app.post('/login', (req, res) => {
   const { email, senha } = req.body;
 
@@ -61,7 +56,6 @@ app.post('/login', (req, res) => {
   });
 });
 
-// ================= CADASTRO PROFESSOR =================
 app.post('/professores', (req, res) => {
   const { nome, email, senha } = req.body;
 
@@ -96,17 +90,14 @@ app.post('/professores', (req, res) => {
   });
 });
 
-// ================= LISTAR PROFESSORES =================
 app.get('/professores', (req, res) => {
   res.status(200).json(professores);
 });
 
-// ================= LISTAR ALUNOS =================
 app.get('/alunos', (req, res) => {
   res.status(200).json(alunos);
 });
 
-// ================= BUSCAR ALUNO POR ID =================
 app.get('/alunos/:id', (req, res) => {
   const { id } = req.params;
 
@@ -123,7 +114,6 @@ app.get('/alunos/:id', (req, res) => {
   res.status(200).json(aluno);
 });
 
-// ================= CADASTRAR ALUNO =================
 app.post('/alunos', (req, res) => {
   const {
     nome,
@@ -164,7 +154,6 @@ app.post('/alunos', (req, res) => {
   });
 });
 
-// ================= EDITAR ALUNO =================
 app.put('/alunos/:id', (req, res) => {
   const { id } = req.params;
 
@@ -196,7 +185,6 @@ app.put('/alunos/:id', (req, res) => {
   });
 });
 
-// ================= DELETAR ALUNO =================
 app.delete('/alunos/:id', (req, res) => {
   const { id } = req.params;
 
