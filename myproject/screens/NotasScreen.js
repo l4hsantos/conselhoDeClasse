@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {View,Text,TextInput,TouchableOpacity,FlatList,ScrollView,StyleSheet,} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -110,6 +110,47 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
+  botaoExcluir: {
+    marginTop: 6,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+
+  textoExcluir: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  labelSelecao: {
+    marginBottom: 10,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+
+  botaoAluno: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+
+  botaoAlunoAtivo: {
+    backgroundColor: '#5B3DF5',
+  },
+
+  textoAluno: {
+    color: '#1F2937',
+  },
+
+  textoAlunoAtivo: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
 });
 
 export default function NotasScreen() {
@@ -118,10 +159,12 @@ export default function NotasScreen() {
   const [bimestre, setBimestre] = useState('');
   const [nota, setNota] = useState('');
   const [notas, setNotas] = useState([]);
+  const [alunos, setAlunos] = useState([]);
   const [idEditando, setIdEditando] = useState(null);
 
   useEffect(() => {
     carregarNotas();
+    carregarAlunos();
   }, []);
 
   async function carregarNotas() {
@@ -133,19 +176,77 @@ export default function NotasScreen() {
     setNotas(dados);
   }
 
+  async function carregarAlunos() {
+    const dados =
+      JSON.parse(
+        await AsyncStorage.getItem('alunos')
+      ) || [];
+
+    dados.sort((a, b) =>
+      a.nome.localeCompare(b.nome)
+    );
+
+    setAlunos(dados);
+  }
+
   async function salvarNota() {
     let lista = [...notas];
+
+    const existe = notas.some(
+      item =>
+        item.aluno === aluno &&
+        item.disciplina === disciplina &&
+        item.bimestre === bimestre &&
+        item.id !== idEditando
+    );
+
+    if (existe) {
+      alert(
+        'Já existe nota para essa disciplina e bimestre.'
+      );
+      return;
+    }
+
+    if (
+      !aluno ||
+      !disciplina ||
+      !bimestre ||
+      !nota
+    ) {
+      alert('Preencha todos os campos.');
+      return;
+    }
+    if (
+      Number(bimestre) < 1 ||
+      Number(bimestre) > 4
+    ) {
+      alert('Bimestre deve ser entre 1 e 4.');
+      return;
+    }
+
+    if (
+      Number(nota) < 0 ||
+      Number(nota) > 10
+    ) {
+      alert('A nota deve ser entre 0 e 10.');
+      return;
+    }
+
+    if (!aluno) {
+      alert('Selecione um aluno.');
+      return;
+    }
 
     if (idEditando) {
       lista = lista.map(item =>
         item.id === idEditando
           ? {
-              ...item,
-              aluno,
-              disciplina,
-              bimestre,
-              nota,
-            }
+            ...item,
+            aluno,
+            disciplina,
+            bimestre,
+            nota,
+          }
           : item
       );
     } else {
@@ -179,6 +280,34 @@ export default function NotasScreen() {
     setNota(item.nota);
     setIdEditando(item.id);
   }
+  async function excluirNota(id) {
+    Alert.alert(
+      'Excluir Nota',
+      'Deseja realmente excluir?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            const lista = notas.filter(
+              nota => nota.id !== id
+            );
+
+            await AsyncStorage.setItem(
+              'notas',
+              JSON.stringify(lista)
+            );
+
+            setNotas(lista);
+          },
+        },
+      ]
+    );
+  }
 
   return (
     <ScrollView
@@ -200,12 +329,38 @@ export default function NotasScreen() {
           Nova Nota
         </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Aluno"
-          value={aluno}
-          onChangeText={setAluno}
-        />
+        <Text style={styles.labelSelecao}>
+          Selecione o aluno
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={true}
+          style={{ marginBottom: 15 }}
+        >
+          {alunos.map(item => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.botaoAluno,
+                aluno === item.nome &&
+                styles.botaoAlunoAtivo
+              ]}
+              onPress={() => setAluno(item.nome)}
+            >
+              <Text
+                style={[
+                  styles.textoAluno,
+                  aluno === item.nome &&
+                  styles.textoAlunoAtivo
+                ]}
+              >
+                {item.nome}
+              </Text>
+            </TouchableOpacity>
+
+          ))}
+        </ScrollView>
 
         <TextInput
           style={styles.input}
@@ -277,6 +432,15 @@ export default function NotasScreen() {
               >
                 <Text style={styles.textoEditar}>
                   Editar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.botaoExcluir}
+                onPress={() => excluirNota(item.id)}
+              >
+                <Text style={styles.textoExcluir}>
+                  Excluir
                 </Text>
               </TouchableOpacity>
             </View>

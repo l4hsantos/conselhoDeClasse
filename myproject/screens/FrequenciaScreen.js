@@ -20,11 +20,13 @@ export default function FrequenciaScreen() {
   const [totalAulas, setTotalAulas] = useState('');
   const [faltas, setFaltas] = useState('');
   const [frequencias, setFrequencias] = useState([]);
+  const [alunos, setAlunos] = useState([]);
 
   const [idEditando, setIdEditando] = useState(null);
 
   useEffect(() => {
     carregarFrequencias();
+    carregarAlunos();
   }, []);
 
   async function carregarFrequencias() {
@@ -36,8 +38,26 @@ export default function FrequenciaScreen() {
     setFrequencias(dados);
   }
 
+  async function carregarAlunos() {
+    const dados =
+      JSON.parse(
+        await AsyncStorage.getItem('alunos')
+      ) || [];
+
+    dados.sort((a, b) =>
+      a.nome.localeCompare(b.nome)
+    );
+
+    setAlunos(dados);
+  }
+
   async function salvarFrequencia() {
     let lista = [...frequencias];
+
+    if (!aluno) {
+      alert('Selecione um aluno.');
+      return;
+    }
 
     const presencas =
       Number(totalAulas) - Number(faltas);
@@ -45,6 +65,32 @@ export default function FrequenciaScreen() {
     const frequencia =
       ((presencas / Number(totalAulas)) * 100)
         .toFixed(1);
+
+    if (
+      Number(faltas) >
+      Number(totalAulas)
+    ) {
+      alert(
+        'Faltas não podem ser maiores que o total de aulas.'
+      );
+      return;
+    }
+
+    const existe = frequencias.some(
+      item =>
+        item.aluno === aluno &&
+        item.disciplina === disciplina &&
+        item.mes === mes &&
+        item.ano === ano &&
+        item.id !== idEditando
+    );
+
+    if (existe) {
+      alert(
+        'Já existe frequência desta disciplina neste período.'
+      );
+      return;
+    }
 
     if (idEditando) {
       lista = lista.map(item =>
@@ -132,12 +178,37 @@ export default function FrequenciaScreen() {
       </View>
 
       <View style={styles.card}>
-        <TextInput
-          style={styles.input}
-          placeholder="Aluno"
-          value={aluno}
-          onChangeText={setAluno}
-        />
+        <Text style={styles.labelSelecao}>
+          Selecione o aluno
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={true}
+          style={{ marginBottom: 15 }}
+        >
+          {alunos.map(item => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.botaoAluno,
+                aluno === item.nome &&
+                styles.botaoAlunoAtivo
+              ]}
+              onPress={() => setAluno(item.nome)}
+            >
+              <Text
+                style={[
+                  styles.textoAluno,
+                  aluno === item.nome &&
+                  styles.textoAlunoAtivo
+                ]}
+              >
+                {item.nome}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <TextInput
           style={styles.input}
@@ -358,16 +429,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   botaoExcluir: {
-  marginTop: 6,
-  backgroundColor: '#EF4444',
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-  borderRadius: 8,
+    marginTop: 6,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+
+  textoExcluir: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  labelSelecao: {
+  marginBottom: 10,
+  fontWeight: '600',
+  color: '#1F2937',
 },
 
-textoExcluir: {
+botaoAluno: {
+  backgroundColor: '#FFF',
+  borderWidth: 1,
+  borderColor: '#E5E7EB',
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 20,
+  marginRight: 8,
+},
+
+botaoAlunoAtivo: {
+  backgroundColor: '#5B3DF5',
+},
+
+textoAluno: {
+  color: '#1F2937',
+},
+
+textoAlunoAtivo: {
   color: '#FFF',
   fontWeight: 'bold',
-  fontSize: 12,
 },
 });
