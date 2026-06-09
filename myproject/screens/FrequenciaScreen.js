@@ -1,472 +1,344 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const cores = {
-  fundo: '#F5F7FF',
-  branco: '#FFFFFF',
-  primaria: '#5B3DF5',
-  texto: '#1F2937',
-  subtitulo: '#6B7280',
-  borda: '#E5E7EB',
-};
-
 export default function FrequenciaScreen() {
+  const [alunos, setAlunos] = useState([]);
+  const [frequencias, setFrequencias] = useState([]);
+
   const [aluno, setAluno] = useState('');
   const [disciplina, setDisciplina] = useState('');
   const [mes, setMes] = useState('');
   const [ano, setAno] = useState('');
   const [totalAulas, setTotalAulas] = useState('');
   const [faltas, setFaltas] = useState('');
-  const [frequencias, setFrequencias] = useState([]);
-  const [alunos, setAlunos] = useState([]);
 
-  const [idEditando, setIdEditando] = useState(null);
+  const [idEdicao, setIdEdicao] = useState(null);
 
   useEffect(() => {
-    carregarFrequencias();
     carregarAlunos();
+    carregarFrequencias();
   }, []);
 
-  async function carregarFrequencias() {
-    const dados =
-      JSON.parse(
-        await AsyncStorage.getItem('frequencias')
-      ) || [];
+  async function carregarAlunos() {
+    try {
+      const dados =
+        JSON.parse(
+          await AsyncStorage.getItem('alunos')
+        ) || [];
 
-    setFrequencias(dados);
+
+      setAlunos(dados);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar os alunos.');
+    }
+
+
   }
 
-  async function carregarAlunos() {
-    const dados =
-      JSON.parse(
-        await AsyncStorage.getItem('alunos')
-      ) || [];
+  async function carregarFrequencias() {
+    try {
+      const dados =
+        JSON.parse(
+          await AsyncStorage.getItem('frequencias')
+        ) || [];
 
-    dados.sort((a, b) =>
-      a.nome.localeCompare(b.nome)
-    );
 
-    setAlunos(dados);
+      setFrequencias(dados);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar as frequências.');
+    }
+
+
   }
 
   async function salvarFrequencia() {
-    let lista = [...frequencias];
+    try {
+      if (!aluno || !disciplina || !mes || !ano || !totalAulas || !faltas
+      ) {
+        Alert.alert('Atenção', 'Preencha todos os campos.');
+        return;
+      }
 
-    if (!aluno) {
-      alert('Selecione um aluno.');
-      return;
-    }
 
-    const presencas =
-      Number(totalAulas) - Number(faltas);
+      const total = Number(totalAulas);
+      const faltasNumero = Number(faltas);
+      const anoNumero = Number(ano);
 
-    const frequencia =
-      ((presencas / Number(totalAulas)) * 100)
-        .toFixed(1);
+      if (total <= 0) {
+        Alert.alert('Atenção', 'Total de aulas deve ser maior que zero.');
+        return;
+      }
 
-    if (
-      Number(faltas) >
-      Number(totalAulas)
-    ) {
-      alert(
-        'Faltas não podem ser maiores que o total de aulas.'
+      if (faltasNumero < 0) {
+        Alert.alert('Atenção', 'Faltas não podem ser negativas.');
+        return;
+      }
+
+      if (faltasNumero > total) {
+        Alert.alert('Atenção', 'As faltas não podem ser maiores que o total de aulas.');
+        return;
+      }
+
+      const existe = frequencias.some(
+        item =>
+          item.aluno === aluno &&
+          item.disciplina === disciplina &&
+          item.mes === mes &&
+          item.ano === anoNumero &&
+          item.id !== idEdicao
       );
-      return;
-    }
 
-    const existe = frequencias.some(
-      item =>
-        item.aluno === aluno &&
-        item.disciplina === disciplina &&
-        item.mes === mes &&
-        item.ano === ano &&
-        item.id !== idEditando
-    );
+      if (existe) {
+        Alert.alert('Atenção', 'Já existe frequência cadastrada para este período.');
+        return;
+      }
 
-    if (existe) {
-      alert(
-        'Já existe frequência desta disciplina neste período.'
+      const presencas = total - faltasNumero;
+      const frequencia = ((presencas / total) * 100).toFixed(1);
+
+      let lista = [...frequencias];
+
+      if (idEdicao) {
+        lista = lista.map(item =>
+          item.id === idEdicao
+            ? {
+              ...item,
+              aluno,
+              disciplina,
+              mes,
+              ano: anoNumero,
+              totalAulas: total,
+              faltas: faltasNumero,
+              presencas,
+              frequencia
+            }
+            : item
+        );
+
+        setIdEdicao(null);
+      } else {
+        lista.push({
+          id: Date.now().toString(),
+          aluno,
+          disciplina,
+          mes,
+          ano: anoNumero,
+          totalAulas: total,
+          faltas: faltasNumero,
+          presencas,
+          frequencia
+        });
+      }
+
+      await AsyncStorage.setItem(
+        'frequencias',
+        JSON.stringify(lista)
       );
-      return;
+
+      setFrequencias(lista);
+
+      setAluno('');
+      setDisciplina('');
+      setMes('');
+      setAno('');
+      setTotalAulas('');
+      setFaltas('');
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível salvar a frequência.');
     }
 
-    if (idEditando) {
-      lista = lista.map(item =>
-        item.id === idEditando
-          ? {
-            ...item,
-            aluno,
-            disciplina,
-            mes,
-            ano,
-            totalAulas,
-            faltas,
-            presencas,
-            frequencia,
-          }
-          : item
-      );
-    } else {
-      lista.push({
-        id: Date.now().toString(),
-        aluno,
-        disciplina,
-        mes,
-        ano,
-        totalAulas,
-        faltas,
-        presencas,
-        frequencia,
-      });
-    }
 
-    await AsyncStorage.setItem(
-      'frequencias',
-      JSON.stringify(lista)
-    );
-
-    setFrequencias(lista);
-
-    setAluno('');
-    setDisciplina('');
-    setMes('');
-    setAno('');
-    setTotalAulas('');
-    setFaltas('');
-    setIdEditando(null);
   }
 
   function editarFrequencia(item) {
     setAluno(item.aluno);
     setDisciplina(item.disciplina);
     setMes(item.mes);
-    setAno(item.ano);
-    setTotalAulas(item.totalAulas);
-    setFaltas(item.faltas);
+    setAno(String(item.ano));
+    setTotalAulas(
+      String(item.totalAulas)
+    );
+    setFaltas(
+      String(item.faltas)
+    );
 
-    setIdEditando(item.id);
+    setIdEdicao(item.id);
   }
 
   async function excluirFrequencia(id) {
-    const novaLista = frequencias.filter(
-      item => item.id !== id
+    Alert.alert('Excluir', 'Deseja excluir este registro?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const lista =
+                frequencias.filter(
+                  item => item.id !== id
+                );
+
+              await AsyncStorage.setItem(
+                'frequencias',
+                JSON.stringify(lista)
+              );
+
+              setFrequencias(lista);
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível excluir.'
+              );
+            }
+          }
+        }
+      ]
     );
 
-    await AsyncStorage.setItem(
-      'frequencias',
-      JSON.stringify(novaLista)
-    );
 
-    setFrequencias(novaLista);
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Text style={styles.titulo}>
-          Frequência
-        </Text>
+    <View> 
+      <Text>-- Gestão de Frequência -- </Text>
+      <Text>Aluno</Text>
 
-        <Text style={styles.subtitulo}>
-          Controle de faltas dos alunos
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.labelSelecao}>
-          Selecione o aluno
-        </Text>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={true}
-          style={{ marginBottom: 15 }}
-        >
-          {alunos.map(item => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.botaoAluno,
-                aluno === item.nome &&
-                styles.botaoAlunoAtivo
-              ]}
-              onPress={() => setAluno(item.nome)}
-            >
-              <Text
-                style={[
-                  styles.textoAluno,
-                  aluno === item.nome &&
-                  styles.textoAlunoAtivo
-                ]}
-              >
-                {item.nome}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Disciplina"
-          value={disciplina}
-          onChangeText={setDisciplina}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Mês"
-          value={mes}
-          onChangeText={setMes}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Ano"
-          value={ano}
-          onChangeText={setAno}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Total de aulas"
-          value={totalAulas}
-          onChangeText={setTotalAulas}
-          keyboardType="numeric"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Número de faltas"
-          value={faltas}
-          onChangeText={setFaltas}
-          keyboardType="numeric"
-        />
-
-        <TouchableOpacity
-          style={styles.botao}
-          onPress={salvarFrequencia}
-        >
-          <Text style={styles.textoBotao}>
-            {idEditando
-              ? 'Atualizar Frequência'
-              : 'Salvar Frequência'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.secao}>
-        Registros
+      <TextInput
+        placeholder="Nome do aluno"
+        value={aluno}
+        onChangeText={setAluno}
+      />
+      <Text>
+        Alunos cadastrados:
       </Text>
 
       <FlatList
-        scrollEnabled={false}
-        data={frequencias}
-        keyExtractor={(item) => item.id}
+        horizontal
+        data={alunos}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <View style={styles.item}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.nome}>
-                {item.aluno}
-              </Text>
+          <TouchableOpacity
+            onPress={() =>
+              setAluno(item.nome)
+            }
+          >
+            <Text>
+              {item.nome}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
 
-              <Text style={styles.info}>
-                {item.disciplina}
-              </Text>
+      <TextInput
+        placeholder="Disciplina"
+        value={disciplina}
+        onChangeText={setDisciplina}
+      />
 
-              <Text style={styles.info}>
-                {item.mes}/{item.ano}
-              </Text>
+      <TextInput
+        placeholder="Mês"
+        value={mes}
+        onChangeText={setMes}
+      />
 
-              <Text style={styles.info}>
-                Total: {item.totalAulas}
-              </Text>
+      <TextInput
+        placeholder="Ano"
+        value={ano}
+        onChangeText={setAno}
+        keyboardType="numeric"
+      />
 
-              <Text style={styles.info}>
-                Faltas: {item.faltas}
-              </Text>
+      <TextInput
+        placeholder="Total de aulas"
+        value={totalAulas}
+        onChangeText={setTotalAulas}
+        keyboardType="numeric"
+      />
 
-              <Text style={styles.info}>
-                Presenças: {item.presencas}
-              </Text>
-            </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeTexto}>
-                {item.frequencia}%
-              </Text>
-            </View>
-            <View>
-              <TouchableOpacity
-                style={styles.botaoEditar}
-                onPress={() => editarFrequencia(item)}
-              >
-                <Text style={styles.textoEditar}>
-                  Editar
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.botaoExcluir}
-                onPress={() => excluirFrequencia(item.id)}
-              >
-                <Text style={styles.textoExcluir}>
-                  Excluir
-                </Text>
-              </TouchableOpacity>
-            </View>
+      <TextInput
+        placeholder="Faltas"
+        value={faltas}
+        onChangeText={setFaltas}
+        keyboardType="numeric"
+      />
+
+      <TouchableOpacity
+        onPress={salvarFrequencia}
+      >
+        <Text>
+          {idEdicao
+            ? 'Atualizar'
+            : 'Salvar'}
+        </Text>
+      </TouchableOpacity>
+
+      <FlatList
+        data={frequencias}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <View>
+            <Text>
+              Aluno: {item.aluno}
+            </Text>
+
+            <Text>
+              Disciplina:
+              {' '}
+              {item.disciplina}
+            </Text>
+
+            <Text>
+              Período:
+              {' '}
+              {item.mes}/{item.ano}
+            </Text>
+
+            <Text>
+              Total de aulas:
+              {' '}
+              {item.totalAulas}
+            </Text>
+
+            <Text>
+              Faltas:
+              {' '}
+              {item.faltas}
+            </Text>
+
+            <Text>
+              Presenças:
+              {' '}
+              {item.presencas}
+            </Text>
+
+            <Text>
+              Frequência:
+              {' '}
+              {item.frequencia}%
+            </Text>
+
+            <TouchableOpacity
+              onPress={() =>
+                editarFrequencia(item)
+              }
+            >
+              <Text>Editar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() =>
+                excluirFrequencia(item.id)
+              }
+            >
+              <Text>Excluir</Text>
+            </TouchableOpacity>
           </View>
         )}
       />
-    </ScrollView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FF',
-  },
-
-  header: {
-    padding: 20,
-    paddingTop: 40,
-  },
-
-  titulo: {
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-
-  subtitulo: {
-    color: '#6B7280',
-    marginTop: 4,
-  },
-
-  card: {
-    backgroundColor: '#FFF',
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
-    elevation: 4,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-  },
-
-  botao: {
-    backgroundColor: '#5B3DF5',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-
-  textoBotao: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-
-  secao: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-
-  item: {
-    backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    marginBottom: 10,
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  nome: {
-    fontWeight: 'bold',
-  },
-
-  faltas: {
-    color: '#6B7280',
-    marginTop: 4,
-  },
-
-  badge: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-
-  badgeTexto: {
-    color: '#DC2626',
-    fontWeight: 'bold',
-  },
-  info: {
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  botaoEditar: {
-    marginTop: 8,
-    backgroundColor: '#5B3DF5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-
-  textoEditar: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  botaoExcluir: {
-    marginTop: 6,
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-
-  textoExcluir: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  labelSelecao: {
-  marginBottom: 10,
-  fontWeight: '600',
-  color: '#1F2937',
-},
-
-botaoAluno: {
-  backgroundColor: '#FFF',
-  borderWidth: 1,
-  borderColor: '#E5E7EB',
-  paddingHorizontal: 14,
-  paddingVertical: 8,
-  borderRadius: 20,
-  marginRight: 8,
-},
-
-botaoAlunoAtivo: {
-  backgroundColor: '#5B3DF5',
-},
-
-textoAluno: {
-  color: '#1F2937',
-},
-
-textoAlunoAtivo: {
-  color: '#FFF',
-  fontWeight: 'bold',
-},
-});
