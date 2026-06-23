@@ -9,28 +9,34 @@ export default function CadastroProfessorScreen({ navigation }) {
   const [senha, setSenha] = useState('');
 
   async function cadastrarProfessor() {
-    const professores =
-      JSON.parse(
-        await AsyncStorage.getItem('professores')
-      ) || [];
+  const professores =
+    JSON.parse(
+      await AsyncStorage.getItem('professores')
+    ) || [];
 
-    const novoProfessor = {
-      id: Date.now().toString(),
-      nome,
-      email,
-      senha
-    };
+  const novoProfessor = {
+    id: Date.now().toString(),
+    nome,
+    email,
+    senha,
+    perfil: 'professor'
+  };
 
-    professores.push(novoProfessor);
+  professores.push(novoProfessor);
 
-    await AsyncStorage.setItem(
-      'professores',
-      JSON.stringify(professores)
-    );
+  await AsyncStorage.setItem(
+    'professores',
+    JSON.stringify(professores)
+  );
 
-    Alert.alert('Sucesso', 'Professor cadastrado');
-    navigation.goBack();
-  }
+  Alert.alert('Sucesso', 'Professor cadastrado');
+
+  setNome('');
+  setEmail('');
+  setSenha('');
+
+  navigation.goBack();
+}
 
   return (
     <View>

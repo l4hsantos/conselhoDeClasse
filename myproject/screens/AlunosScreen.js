@@ -4,10 +4,18 @@ import {View,Text,TextInput,TouchableOpacity,FlatList} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AlunosScreen() {
-const [alunos, setAlunos] = useState([]);
 const [nome, setNome] = useState('');
 const [matricula, setMatricula] = useState('');
 const [turma, setTurma] = useState('');
+
+const [alunos, setAlunos] = useState([]);
+
+const [dataNascimento, setDataNascimento] = useState('');
+const [anoLetivo, setAnoLetivo] = useState('');
+const [media, setMedia] = useState('');
+const [frequencia, setFrequencia] = useState('');
+const [situacao, setSituacao] = useState('');
+
 const [idEdicao, setIdEdicao] = useState(null);
 
 useEffect(() => {
@@ -25,50 +33,75 @@ setAlunos(dados);
 }
 
 async function salvarAluno() {
-let lista = [...alunos];
 
-
-if (idEdicao) {
-  lista = lista.map(aluno =>
-    aluno.id === idEdicao
-      ? {
-          ...aluno,
-          nome,
-          matricula,
-          turma
-        }
-      : aluno
-  );
-
-  setIdEdicao(null);
-} else {
-  lista.push({
-    id: Date.now().toString(),
-    nome,
-    matricula,
-    turma
-  });
+  if (
+  nome.trim() === '' ||
+  matricula.trim() === '' ||
+  turma.trim() === '' ||
+  dataNascimento.trim() === '' ||
+  anoLetivo.trim() === '' 
+) {
+  alert('Preencha todos os campos antes de cadastrar o aluno!');
+  return;
 }
+  let lista = [...alunos];
 
-await AsyncStorage.setItem(
-  'alunos',
-  JSON.stringify(lista)
-);
+  if (idEdicao) {
+    lista = lista.map(aluno =>
+      aluno.id === idEdicao
+        ? {
+            ...aluno,
+            nome,
+            matricula,
+            turma,
+            dataNascimento,
+            anoLetivo,
+            media,
+            frequencia,
+            situacao
+          }
+        : aluno
+    );
 
-setAlunos(lista);
+    setIdEdicao(null);
+  } else {
+    lista.push({
+      id: Date.now().toString(),
+      nome,
+      matricula,
+      turma,
+      dataNascimento,
+      anoLetivo,
+      media,
+      frequencia,
+      situacao
+    });
+  }
 
-setNome('');
-setMatricula('');
-setTurma('');
+  await AsyncStorage.setItem('alunos', JSON.stringify(lista));
 
+  setAlunos(lista);
 
+  setNome('');
+  setMatricula('');
+  setTurma('');
+  setDataNascimento('');
+  setAnoLetivo('');
+  setMedia('');
+  setFrequencia('');
+  setSituacao('');
 }
 
 function editarAluno(aluno) {
-setNome(aluno.nome);
-setMatricula(aluno.matricula);
-setTurma(aluno.turma);
-setIdEdicao(aluno.id);
+  setNome(aluno.nome);
+  setMatricula(aluno.matricula);
+  setTurma(aluno.turma);
+  setDataNascimento(aluno.dataNascimento);
+  setAnoLetivo(aluno.anoLetivo);
+  setMedia(aluno.media);
+  setFrequencia(aluno.frequencia);
+  setSituacao(aluno.situacao);
+  setIdEdicao(aluno.id);
 }
 
 async function excluirAluno(id) {
@@ -107,6 +140,36 @@ return ( <View> <Text>-- Gestão de Alunos --</Text>
     onChangeText={setTurma}
   />
 
+  <TextInput
+  placeholder="Data de Nascimento (AAAA-MM-DD)"
+  value={dataNascimento}
+  onChangeText={setDataNascimento}
+/>
+
+<TextInput
+  placeholder="Ano Letivo"
+  value={anoLetivo}
+  onChangeText={setAnoLetivo}
+/>
+
+<TextInput
+  placeholder="Média"
+  value={media}
+  onChangeText={setMedia}
+/>
+
+<TextInput
+  placeholder="Frequência"
+  value={frequencia}
+  onChangeText={setFrequencia}
+/>
+
+<TextInput
+  placeholder="Situação"
+  value={situacao}
+  onChangeText={setSituacao}
+/>
+
   <TouchableOpacity onPress={salvarAluno}>
     <Text>
       {idEdicao ? 'Atualizar' : 'Cadastrar'}
@@ -118,9 +181,14 @@ return ( <View> <Text>-- Gestão de Alunos --</Text>
     keyExtractor={item => item.id}
     renderItem={({ item }) => (
       <View>
-        <Text>{item.nome}</Text>
-        <Text>{item.matricula}</Text>
-        <Text>{item.turma}</Text>
+        <Text>Nome: {item.nome}</Text>
+        <Text>Matrícula: {item.matricula}</Text>
+        <Text>Turma: {item.turma}</Text>
+        <Text>Nascimento: {item.dataNascimento}</Text>
+        <Text>Ano Letivo: {item.anoLetivo}</Text>
+        <Text>Média: {item.media}</Text>
+        <Text>Frequência: {item.frequencia}</Text>
+        <Text>Situação: {item.situacao}</Text>
 
         <TouchableOpacity
           onPress={() => editarAluno(item)}
