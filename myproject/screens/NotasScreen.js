@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  Alert
+} from 'react-native';
+
+import { buscarAlunos } from '../database/alunoData';
+
+import {
+  buscarNotas,
+  inserirNota,
+  atualizarNota,
+  excluirNota
+} from '../database/notaData';
 
 export default function NotasScreen() {
+
   const [alunos, setAlunos] = useState([]);
   const [notas, setNotas] = useState([]);
 
@@ -18,132 +34,103 @@ export default function NotasScreen() {
     carregarNotas();
   }, []);
 
-  async function carregarAlunos() {
-    try {
-      const dados = JSON.parse(
-          await AsyncStorage.getItem('alunos')
-        ) || [];
-
-      setAlunos(dados);
-    } catch (error) {
-      Alert.alert('Erro','Não foi possível carregar os alunos.'
-      );
-    }
+  function carregarAlunos() {
+    const dados = buscarAlunos();
+    setAlunos(dados);
   }
 
-  async function carregarNotas() {
-    try {
-      const dados = JSON.parse(
-          await AsyncStorage.getItem('notas')
-        ) || [];
-
-      setNotas(dados);
-    } catch (error) {
-      Alert.alert('Erro','Não foi possível carregar as notas.'
-      );
-    }
+  function carregarNotas() {
+    const dados = buscarNotas();
+    setNotas(dados);
   }
 
-  async function salvarNota() {
-    try {
-      if (!aluno || !disciplina || !bimestre || !nota
-      ) {
-        Alert.alert('Atenção', 'Preencha todos os campos.'
-        );
-        return;
-      }
+  function salvarNota() {
 
-      const notaNumero = Number(nota);
-      const bimestreNumero = Number(bimestre);
-
-      if (
-        bimestreNumero < 1 ||
-        bimestreNumero > 4
-      ) {
-        Alert.alert('Atenção', 'O bimestre deve ser entre 1 e 4.'
-        );
-        return;
-      }
-
-      if (
-        notaNumero < 0 ||
-        notaNumero > 10
-      ) {
-        Alert.alert('Atenção', 'A nota deve ser entre 0 e 10.'
-        );
-        return;
-      }
-
-      let lista = [...notas];
-
-      const existe = lista.some(
-        item =>
-          item.aluno === aluno &&
-          item.disciplina === disciplina &&
-          item.bimestre === bimestreNumero &&
-          item.id !== idEdicao
+    if (
+      !aluno ||
+      !disciplina ||
+      !bimestre ||
+      !nota
+    ) {
+      Alert.alert(
+        'Atenção',
+        'Preencha todos os campos.'
       );
-
-      if (existe) {
-        Alert.alert('Atenção', 'Já existe nota dessa disciplina nesse bimestre.'
-        );
-        return;
-      }
-
-      if (idEdicao) {
-        lista = lista.map(item =>
-          item.id === idEdicao
-            ? {
-              ...item,
-              aluno,
-              disciplina,
-              bimestre: bimestreNumero,
-              nota: notaNumero
-            }
-            : item
-        );
-
-        setIdEdicao(null);
-      } else {
-        lista.push({
-          id: Date.now().toString(),
-          aluno,
-          disciplina,
-          bimestre: bimestreNumero,
-          nota: notaNumero
-        });
-      }
-
-      await AsyncStorage.setItem(
-        'notas',
-        JSON.stringify(lista)
-      );
-
-      setNotas(lista);
-
-      setAluno('');
-      setDisciplina('');
-      setBimestre('');
-      setNota('');
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar a nota.'
-      );
+      return;
     }
+
+    const notaNumero = Number(nota);
+    const bimestreNumero = Number(bimestre);
+
+    if (bimestreNumero < 1 || bimestreNumero > 4) {
+      Alert.alert(
+        'Atenção',
+        'Bimestre deve ser de 1 a 4.'
+      );
+      return;
+    }
+
+    if (notaNumero < 0 || notaNumero > 10) {
+      Alert.alert(
+        'Atenção',
+        'Nota deve ser entre 0 e 10.'
+      );
+      return;
+    }
+
+    const dataRegistro = new Date()
+      .toISOString()
+      .substring(0, 10);
+
+    if (idEdicao) {
+
+      atualizarNota(
+        idEdicao,
+        notaNumero,
+        bimestreNumero,
+        dataRegistro,
+        aluno,
+        disciplina
+      );
+
+    } else {
+
+      inserirNota(
+        notaNumero,
+        bimestreNumero,
+        dataRegistro,
+        aluno,
+        disciplina
+      );
+
+    }
+
+    carregarNotas();
+
+    setAluno('');
+    setDisciplina('');
+    setBimestre('');
+    setNota('');
+    setIdEdicao(null);
 
   }
 
   function editarNota(item) {
-    setAluno(item.aluno);
-    setDisciplina(item.disciplina);
-    setBimestre(String(item.bimestre));
-    setNota(String(item.nota));
 
-    setIdEdicao(item.id);
+    setAluno(String(item.matricula));
+    setDisciplina(String(item.idDisciplina));
+    setBimestre(String(item.unidade));
+    setNota(String(item.valor));
+
+    setIdEdicao(item.idNota);
 
   }
 
-  async function excluirNota(id) {
-    Alert.alert('Excluir', 'Deseja excluir esta nota?',
+  function excluirNotaConfirmacao(idNota) {
+
+    Alert.alert(
+      'Excluir',
+      'Deseja excluir esta nota?',
       [
         {
           text: 'Cancelar',
@@ -151,23 +138,11 @@ export default function NotasScreen() {
         },
         {
           text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const lista = notas.filter(
-                item => item.id !== id
-              );
+          onPress: () => {
 
-              await AsyncStorage.setItem(
-                'notas',
-                JSON.stringify(lista)
-              );
+            excluirNota(idNota);
+            carregarNotas();
 
-              setNotas(lista);
-            } catch (error) {
-              Alert.alert('Erro', 'Não foi possível excluir.'
-              );
-            }
           }
         }
       ]
@@ -177,12 +152,14 @@ export default function NotasScreen() {
 
   return (
 
-    //-- Gestão de Notas --
     <View>
+
+      <Text>-- Gestão de Notas --</Text>
+
       <Text>Aluno</Text>
 
       <TextInput
-        placeholder="Nome do aluno"
+        placeholder="Matrícula do aluno"
         value={aluno}
         onChangeText={setAluno}
       />
@@ -192,22 +169,25 @@ export default function NotasScreen() {
       <FlatList
         horizontal
         data={alunos}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.matricula)}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() =>
-              setAluno(item.nome)
+              setAluno(String(item.matricula))
             }
           >
-            <Text>{item.nome}</Text>
+            <Text>
+              {item.nome} ({item.matricula})
+            </Text>
           </TouchableOpacity>
         )}
       />
 
       <TextInput
-        placeholder="Disciplina"
+        placeholder="ID da disciplina"
         value={disciplina}
         onChangeText={setDisciplina}
+        keyboardType="numeric"
       />
 
       <TextInput
@@ -224,36 +204,51 @@ export default function NotasScreen() {
         keyboardType="numeric"
       />
 
-      <TouchableOpacity
-        onPress={salvarNota}
-      >
-        <Text>{idEdicao ? 'Atualizar' : 'Salvar'}</Text>
+      <TouchableOpacity onPress={salvarNota}>
+        <Text>
+          {idEdicao ? 'Atualizar' : 'Salvar'}
+        </Text>
       </TouchableOpacity>
 
       <FlatList
         data={notas}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.idNota)}
         renderItem={({ item }) => (
           <View>
+
             <Text>Aluno: {item.aluno}</Text>
-            <Text>Disciplina: {item.disciplina}</Text>
-            <Text>Bimestre: {item.bimestre}</Text>
-            <Text>Nota: {item.nota}</Text>
+
+            <Text>
+              Disciplina: {item.disciplina}
+            </Text>
+
+            <Text>
+              Bimestre: {item.unidade}
+            </Text>
+
+            <Text>
+              Nota: {item.valor}
+            </Text>
 
             <TouchableOpacity
-              onPress={() => editarNota(item)}>
-
+              onPress={() => editarNota(item)}
+            >
               <Text>Editar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => excluirNota(item.id)
-              }>
+              onPress={() =>
+                excluirNotaConfirmacao(item.idNota)
+              }
+            >
               <Text>Excluir</Text>
             </TouchableOpacity>
+
           </View>
         )}
       />
+
     </View>
+
   );
 }

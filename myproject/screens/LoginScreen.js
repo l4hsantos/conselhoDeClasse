@@ -1,32 +1,59 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buscarUsuario } from '../database/usuarioData';
 
 export default function LoginScreen({ navigation }) {
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
-  async function realizarLogin() {
-    const professores =
-      JSON.parse(
-        await AsyncStorage.getItem('professores')
-      ) || [];
+function realizarLogin() {
 
-    const professor = professores.find(
-      p => p.email === email && p.senha === senha
+  try {
+
+    if (
+      email.trim() === '' ||
+      senha.trim() === ''
+    ) {
+
+      Alert.alert(
+        'Atenção',
+        'Preencha email e senha.'
+      );
+
+      return;
+    }
+
+    const usuario = buscarUsuario(
+      email,
+      senha
     );
 
-    if (professor) {
+    if (usuario) {
+
       navigation.replace('Dashboard');
+
     } else {
+
       Alert.alert(
         'Erro',
-        'Credenciais inválidas'
+        'Credenciais inválidas.'
       );
+
     }
+
+  } catch (error) {
+
+    console.log(error);
+
+    Alert.alert(
+      'Erro',
+      'Não foi possível realizar o login.'
+    );
+
   }
+
+}
 
   return (
     <View>

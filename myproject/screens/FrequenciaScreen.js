@@ -1,344 +1,215 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  Alert
+} from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buscarAlunos } from '../database/alunoData';
+
+import {
+  buscarFaltas,
+  inserirFalta,
+  atualizarFalta,
+  excluirFalta
+} from '../database/faltaData';
 
 export default function FrequenciaScreen() {
-  const [alunos, setAlunos] = useState([]);
-  const [frequencias, setFrequencias] = useState([]);
 
-  const [aluno, setAluno] = useState('');
-  const [disciplina, setDisciplina] = useState('');
-  const [mes, setMes] = useState('');
-  const [ano, setAno] = useState('');
-  const [totalAulas, setTotalAulas] = useState('');
-  const [faltas, setFaltas] = useState('');
+  const [alunos, setAlunos] = useState([]);
+  const [faltas, setFaltas] = useState([]);
+
+  const [matricula, setMatricula] = useState('');
+  const [idDisciplina, setIdDisciplina] = useState('');
+  const [quantidade, setQuantidade] = useState('');
 
   const [idEdicao, setIdEdicao] = useState(null);
 
   useEffect(() => {
     carregarAlunos();
-    carregarFrequencias();
+    carregarFaltas();
   }, []);
 
-  async function carregarAlunos() {
-    try {
-      const dados =
-        JSON.parse(
-          await AsyncStorage.getItem('alunos')
-        ) || [];
-
-
-      setAlunos(dados);
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar os alunos.');
-    }
-
-
+  function carregarAlunos() {
+    setAlunos(buscarAlunos());
   }
 
-  async function carregarFrequencias() {
-    try {
-      const dados =
-        JSON.parse(
-          await AsyncStorage.getItem('frequencias')
-        ) || [];
-
-
-      setFrequencias(dados);
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar as frequências.');
-    }
-
-
+  function carregarFaltas() {
+    setFaltas(buscarFaltas());
   }
 
-  async function salvarFrequencia() {
-    try {
-      if (!aluno || !disciplina || !mes || !ano || !totalAulas || !faltas
-      ) {
-        Alert.alert('Atenção', 'Preencha todos os campos.');
-        return;
-      }
+  function salvarFalta() {
 
+    if (
+      !matricula ||
+      !idDisciplina ||
+      !quantidade
+    ) {
+      Alert.alert(
+        'Atenção',
+        'Preencha todos os campos.'
+      );
+      return;
+    }
 
-      const total = Number(totalAulas);
-      const faltasNumero = Number(faltas);
-      const anoNumero = Number(ano);
+    const dataRegistro = new Date()
+      .toISOString()
+      .substring(0,10);
 
-      if (total <= 0) {
-        Alert.alert('Atenção', 'Total de aulas deve ser maior que zero.');
-        return;
-      }
+    if(idEdicao){
 
-      if (faltasNumero < 0) {
-        Alert.alert('Atenção', 'Faltas não podem ser negativas.');
-        return;
-      }
-
-      if (faltasNumero > total) {
-        Alert.alert('Atenção', 'As faltas não podem ser maiores que o total de aulas.');
-        return;
-      }
-
-      const existe = frequencias.some(
-        item =>
-          item.aluno === aluno &&
-          item.disciplina === disciplina &&
-          item.mes === mes &&
-          item.ano === anoNumero &&
-          item.id !== idEdicao
+      atualizarFalta(
+        idEdicao,
+        quantidade,
+        dataRegistro,
+        matricula,
+        idDisciplina
       );
 
-      if (existe) {
-        Alert.alert('Atenção', 'Já existe frequência cadastrada para este período.');
-        return;
-      }
+    }else{
 
-      const presencas = total - faltasNumero;
-      const frequencia = ((presencas / total) * 100).toFixed(1);
-
-      let lista = [...frequencias];
-
-      if (idEdicao) {
-        lista = lista.map(item =>
-          item.id === idEdicao
-            ? {
-              ...item,
-              aluno,
-              disciplina,
-              mes,
-              ano: anoNumero,
-              totalAulas: total,
-              faltas: faltasNumero,
-              presencas,
-              frequencia
-            }
-            : item
-        );
-
-        setIdEdicao(null);
-      } else {
-        lista.push({
-          id: Date.now().toString(),
-          aluno,
-          disciplina,
-          mes,
-          ano: anoNumero,
-          totalAulas: total,
-          faltas: faltasNumero,
-          presencas,
-          frequencia
-        });
-      }
-
-      await AsyncStorage.setItem(
-        'frequencias',
-        JSON.stringify(lista)
+      inserirFalta(
+        quantidade,
+        dataRegistro,
+        matricula,
+        idDisciplina
       );
 
-      setFrequencias(lista);
-
-      setAluno('');
-      setDisciplina('');
-      setMes('');
-      setAno('');
-      setTotalAulas('');
-      setFaltas('');
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar a frequência.');
     }
 
+    carregarFaltas();
+
+    setMatricula('');
+    setIdDisciplina('');
+    setQuantidade('');
+    setIdEdicao(null);
 
   }
 
-  function editarFrequencia(item) {
-    setAluno(item.aluno);
-    setDisciplina(item.disciplina);
-    setMes(item.mes);
-    setAno(String(item.ano));
-    setTotalAulas(
-      String(item.totalAulas)
-    );
-    setFaltas(
-      String(item.faltas)
-    );
+  function editar(item){
 
-    setIdEdicao(item.id);
+    setMatricula(String(item.matricula));
+    setIdDisciplina(String(item.idDisciplina));
+    setQuantidade(String(item.quantidade));
+
+    setIdEdicao(item.idFalta);
+
   }
 
-  async function excluirFrequencia(id) {
-    Alert.alert('Excluir', 'Deseja excluir este registro?',
+  function excluir(id){
+
+    Alert.alert(
+      'Excluir',
+      'Deseja excluir?',
       [
         {
-          text: 'Cancelar',
-          style: 'cancel'
+          text:'Cancelar',
+          style:'cancel'
         },
         {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const lista =
-                frequencias.filter(
-                  item => item.id !== id
-                );
+          text:'Excluir',
+          onPress:()=>{
 
-              await AsyncStorage.setItem(
-                'frequencias',
-                JSON.stringify(lista)
-              );
+            excluirFalta(id);
 
-              setFrequencias(lista);
-            } catch (error) {
-              Alert.alert('Erro', 'Não foi possível excluir.'
-              );
-            }
+            carregarFaltas();
+
           }
         }
       ]
     );
 
-
   }
 
-  return (
-    <View> 
-      <Text>-- Gestão de Frequência -- </Text>
-      <Text>Aluno</Text>
+  return(
+
+    <View>
+
+      <Text>Gestão de Frequência</Text>
+
+      <Text>Matrícula</Text>
 
       <TextInput
-        placeholder="Nome do aluno"
-        value={aluno}
-        onChangeText={setAluno}
+        value={matricula}
+        onChangeText={setMatricula}
+        placeholder="Matrícula"
       />
-      <Text>
-        Alunos cadastrados:
-      </Text>
 
       <FlatList
         horizontal
         data={alunos}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
+        keyExtractor={item=>String(item.matricula)}
+        renderItem={({item})=>(
+
           <TouchableOpacity
-            onPress={() =>
-              setAluno(item.nome)
-            }
+            onPress={()=>setMatricula(String(item.matricula))}
           >
-            <Text>
-              {item.nome}
-            </Text>
+
+            <Text>{item.nome}</Text>
+
           </TouchableOpacity>
+
         )}
       />
 
       <TextInput
-        placeholder="Disciplina"
-        value={disciplina}
-        onChangeText={setDisciplina}
+        placeholder="ID Disciplina"
+        value={idDisciplina}
+        onChangeText={setIdDisciplina}
       />
 
       <TextInput
-        placeholder="Mês"
-        value={mes}
-        onChangeText={setMes}
-      />
-
-      <TextInput
-        placeholder="Ano"
-        value={ano}
-        onChangeText={setAno}
-        keyboardType="numeric"
-      />
-
-      <TextInput
-        placeholder="Total de aulas"
-        value={totalAulas}
-        onChangeText={setTotalAulas}
-        keyboardType="numeric"
-      />
-
-      <TextInput
-        placeholder="Faltas"
-        value={faltas}
-        onChangeText={setFaltas}
+        placeholder="Quantidade de faltas"
+        value={quantidade}
+        onChangeText={setQuantidade}
         keyboardType="numeric"
       />
 
       <TouchableOpacity
-        onPress={salvarFrequencia}
+        onPress={salvarFalta}
       >
         <Text>
-          {idEdicao
-            ? 'Atualizar'
-            : 'Salvar'}
+          {idEdicao ? 'Atualizar' : 'Salvar'}
         </Text>
       </TouchableOpacity>
 
       <FlatList
-        data={frequencias}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
+        data={faltas}
+        keyExtractor={item=>String(item.idFalta)}
+        renderItem={({item})=>(
+
           <View>
-            <Text>
-              Aluno: {item.aluno}
-            </Text>
 
-            <Text>
-              Disciplina:
-              {' '}
-              {item.disciplina}
-            </Text>
+            <Text>Matrícula: {item.matricula}</Text>
 
-            <Text>
-              Período:
-              {' '}
-              {item.mes}/{item.ano}
-            </Text>
+            <Text>Disciplina: {item.idDisciplina}</Text>
 
-            <Text>
-              Total de aulas:
-              {' '}
-              {item.totalAulas}
-            </Text>
+            <Text>Faltas: {item.quantidade}</Text>
 
-            <Text>
-              Faltas:
-              {' '}
-              {item.faltas}
-            </Text>
-
-            <Text>
-              Presenças:
-              {' '}
-              {item.presencas}
-            </Text>
-
-            <Text>
-              Frequência:
-              {' '}
-              {item.frequencia}%
-            </Text>
+            <Text>Data: {item.dataRegistro}</Text>
 
             <TouchableOpacity
-              onPress={() =>
-                editarFrequencia(item)
-              }
+              onPress={()=>editar(item)}
             >
               <Text>Editar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() =>
-                excluirFrequencia(item.id)
-              }
+              onPress={()=>excluir(item.idFalta)}
             >
               <Text>Excluir</Text>
             </TouchableOpacity>
+
           </View>
+
         )}
       />
+
     </View>
+
   );
+
 }

@@ -1,78 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  Alert
+} from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  buscarRelatorioAlunos,
+  buscarRelatorioNotas,
+  buscarRelatorioFaltas
+} from '../database/relatorioData';
 
 export default function RelatoriosScreen() {
+
   const [alunos, setAlunos] = useState([]);
   const [notas, setNotas] = useState([]);
-  const [frequencias, setFrequencias] = useState([]);
+  const [faltas, setFaltas] = useState([]);
 
-  const [alunoSelecionado, setAlunoSelecionado] =
-    useState(null);
+  const [alunoSelecionado, setAlunoSelecionado] = useState(null);
 
   useEffect(() => {
     carregarDados();
   }, []);
 
-  async function carregarDados() {
-    try {
-      const alunosDados =
-        JSON.parse(
-          await AsyncStorage.getItem('alunos')
-        ) || [];
+  function carregarDados() {
 
+    const listaAlunos = buscarRelatorioAlunos();
+    const listaNotas = buscarRelatorioNotas();
+    const listaFaltas = buscarRelatorioFaltas();
 
-      const notasDados =
-        JSON.parse(
-          await AsyncStorage.getItem('notas')
-        ) || [];
+    setAlunos(listaAlunos);
+    setNotas(listaNotas);
+    setFaltas(listaFaltas);
 
-      const frequenciasDados =
-        JSON.parse(
-          await AsyncStorage.getItem('frequencias')
-        ) || [];
-
-      setAlunos(alunosDados);
-      setNotas(notasDados);
-      setFrequencias(frequenciasDados);
-
-      if (alunosDados.length > 0) {
-        setAlunoSelecionado(
-          alunosDados[0]
-        );
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar os relatórios.'
-      );
+    if (listaAlunos.length > 0) {
+      setAlunoSelecionado(listaAlunos[0]);
     }
-
 
   }
 
-  const notasAluno = alunoSelecionado ? notas.filter(
-    nota => nota.aluno === alunoSelecionado.nome) : [];
+  const notasAluno = alunoSelecionado
+    ? notas.filter(
+        item =>
+          item.matricula ===
+          alunoSelecionado.matricula
+      )
+    : [];
 
-  const frequenciasAluno = alunoSelecionado ? frequencias.filter(
-    item => item.aluno === alunoSelecionado.nome) : [];
+  const faltasAluno = alunoSelecionado
+    ? faltas.filter(
+        item =>
+          item.matricula ===
+          alunoSelecionado.matricula
+      )
+    : [];
 
-  const somaNotas = notasAluno.reduce(
-    (total, item) =>
-      total + parseFloat(item.nota || 0), 0);
+  const media =
+    notasAluno.length > 0
+      ? (
+          notasAluno.reduce(
+            (soma, item) =>
+              soma + Number(item.valor),
+            0
+          ) / notasAluno.length
+        ).toFixed(1)
+      : '0';
 
-  const mediaGeral = notasAluno.length > 0 ? (somaNotas / notasAluno.length).toFixed(1) : '0';
-
-  const frequenciaMedia = frequenciasAluno.length > 0 ? (frequenciasAluno.reduce(
-      (total, item) => total + Number(item.frequencia), 0) / frequenciasAluno.length).toFixed(1) : '0';
+  const totalFaltas =
+    faltasAluno.reduce(
+      (soma, item) =>
+        soma + Number(item.quantidade),
+      0
+    );
 
   function exportarPDF() {
-    Alert.alert('Aviso', 'Função de PDF ainda não implementada.'
+    Alert.alert(
+      'Aviso',
+      'PDF ainda não implementado.'
     );
   }
 
   return (
+
     <View>
-      <Text>-- Relatórios -- </Text>
+
+      <Text>Relatórios</Text>
 
       <TouchableOpacity
         onPress={exportarPDF}
@@ -80,68 +94,139 @@ export default function RelatoriosScreen() {
         <Text>Exportar PDF</Text>
       </TouchableOpacity>
 
-      <Text>Total de alunos:{' '}{alunos.length}</Text>
-      <Text>Total de notas:{' '}{notas.length}</Text>
+      <Text>
+        Total de alunos: {alunos.length}
+      </Text>
 
-      <Text>Selecione um aluno:</Text>
+      <Text>
+        Total de notas: {notas.length}
+      </Text>
+
+      <Text>
+        Selecione um aluno:
+      </Text>
 
       <FlatList
         horizontal
         data={alunos}
-        keyExtractor={item => item.id}
+        keyExtractor={item =>
+          String(item.matricula)
+        }
         renderItem={({ item }) => (
+
           <TouchableOpacity
             onPress={() =>
               setAlunoSelecionado(item)
             }
           >
+
             <Text>{item.nome}</Text>
+
           </TouchableOpacity>
+
         )}
       />
 
       {alunoSelecionado && (
-        <View>
-          <Text>Nome:{' '}{alunoSelecionado.nome}</Text>
-          <Text>Matrícula:{' '}{alunoSelecionado.matricula}</Text>
-          <Text>Turma:{' '}{alunoSelecionado.turma}</Text>
-          <Text>Média Geral:{' '}{mediaGeral}</Text>
 
-          <Text>Frequência Média:{' '}{frequenciaMedia}%</Text>
+        <View>
+
+          <Text>
+            Nome: {alunoSelecionado.nome}
+          </Text>
+
+          <Text>
+            Matrícula:
+            {' '}
+            {alunoSelecionado.matricula}
+          </Text>
+
+          <Text>
+            Média:
+            {' '}
+            {media}
+          </Text>
+
+          <Text>
+            Total de faltas:
+            {' '}
+            {totalFaltas}
+          </Text>
+
         </View>
+
       )}
 
-      <Text>--- Notas ---</Text>
+      <Text>Notas</Text>
 
       <FlatList
         data={notasAluno}
-        keyExtractor={item => item.id}
+        keyExtractor={item =>
+          String(item.idNota)
+        }
         renderItem={({ item }) => (
+
           <View>
-            <Text>Disciplina:{' '}{item.disciplina}</Text>
-            <Text>Bimestre:{' '}{item.bimestre}</Text>
-            <Text>Nota:{' '}{item.nota}</Text>
+
+            <Text>
+              Disciplina:
+              {' '}
+              {item.idDisciplina}
+            </Text>
+
+            <Text>
+              Unidade:
+              {' '}
+              {item.unidade}
+            </Text>
+
+            <Text>
+              Nota:
+              {' '}
+              {item.valor}
+            </Text>
+
           </View>
+
         )}
       />
 
-      <Text>--- Frequência ---</Text>
+      <Text>Faltas</Text>
 
       <FlatList
-        data={frequenciasAluno}
-        keyExtractor={item => item.id}
+        data={faltasAluno}
+        keyExtractor={item =>
+          String(item.idFalta)
+        }
         renderItem={({ item }) => (
+
           <View>
-            <Text>Disciplina:{' '}{item.disciplina}</Text>
-            <Text>Mês:{' '}{item.mes}</Text>
-            <Text>Ano:{' '}{item.ano}</Text>
-            <Text>Faltas:{' '}{item.faltas}</Text>
-            <Text>Frequência:{' '}{item.frequencia}%</Text>
+
+            <Text>
+              Disciplina:
+              {' '}
+              {item.idDisciplina}
+            </Text>
+
+            <Text>
+              Quantidade:
+              {' '}
+              {item.quantidade}
+            </Text>
+
+            <Text>
+              Data:
+              {' '}
+              {item.dataRegistro}
+            </Text>
+
           </View>
+
         )}
       />
+
     </View>
 
-
   );
+
 }
